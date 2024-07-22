@@ -20,9 +20,41 @@ namespace AlwaysLikeThis.Controllers
         }
 
         // GET: Articles
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string articleGenre, string searchString)
         {
-            return View(await _context.Article.ToListAsync());
+            if (_context.Article == null)
+            {
+                return Problem("Entity set 'AlwaysLikeThis.Article' is null");
+            }
+
+            //Use LINQ to get list of genres
+            IQueryable<string> genreQuery = from a in _context.Article
+                                               orderby a.Genre
+                                               select a.Genre;
+
+
+
+            //Defines the query, doesn't run it
+            var articles = from a in _context.Article
+                           select a;
+
+            if (!String.IsNullOrEmpty(searchString))
+            {
+                articles = articles.Where(s => s.Title!.Contains(searchString));
+            }
+
+            if (!string.IsNullOrEmpty(articleGenre))
+            {
+                articles = articles.Where(x => x.Genre == articleGenre);
+            }
+
+            var articleGenreVM = new ArticleGenreViewModel
+            {
+                Genres = new SelectList(await genreQuery.Distinct().ToListAsync()),
+                Articles = await articles.ToListAsync()
+            };
+
+            return View(articleGenreVM);
         }
 
         // GET: Articles/Details/5
@@ -54,7 +86,7 @@ namespace AlwaysLikeThis.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Title,ReleaseDate,Genre,Price")] Article article)
+        public async Task<IActionResult> Create([Bind("Id,Title,ReleaseDate,Genre,Price,Rating")] Article article)
         {
             if (ModelState.IsValid)
             {
@@ -86,7 +118,7 @@ namespace AlwaysLikeThis.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,ReleaseDate,Genre,Price")] Article article)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,ReleaseDate,Genre,Price,Rating")] Article article)
         {
             if (id != article.Id)
             {
